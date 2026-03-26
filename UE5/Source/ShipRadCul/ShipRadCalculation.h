@@ -144,6 +144,8 @@ private:
     TArray<float> TemperatureHistory;
     TArray<float> RadiationHistory;
     static constexpr int32 HISTORY_SIZE = 5;
+    /** 平滑帧率因子 (与Unity中Time.deltaTime * 30f对应) */
+    static constexpr float SMOOTHING_FRAMERATE_FACTOR = 30.0f;
     bool bIsInitialized;
 
     // ==================== 内部计算方法 ====================

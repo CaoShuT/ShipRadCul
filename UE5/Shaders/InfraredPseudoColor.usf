@@ -155,4 +155,7 @@ float RadIntensity = saturate(Radiation / 1000.0);
 Albedo = FinalColor * 0.9;
 Emissive = FinalColor * RadIntensity * EmissionIntensity * Attenuation;
 
-return 1;
+// 注意：在UE5材质编辑器的Custom节点中使用时，
+// 如果配置了多个输出引脚(Albedo, Emissive)，请移除下面的return语句。
+// 如果作为单输出节点使用，则保留return。
+// return 1;

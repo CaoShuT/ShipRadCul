@@ -40,7 +40,7 @@ void UShipInfraredVisualizerComponent::BeginPlay()
         DynMaterial = UMaterialInstanceDynamic::Create(InfraredMaterial, this);
         if (DynMaterial)
         {
-            DynMaterial->SetScalarParameterValue(FName("BlendFactor"), 0.05f);
+            DynMaterial->SetScalarParameterValue(FName("BlendFactor"), DefaultBlendFactor);
             MeshComp->SetMaterial(0, DynMaterial);
         }
     }
@@ -51,7 +51,7 @@ void UShipInfraredVisualizerComponent::BeginPlay()
         if (CurrentMat)
         {
             DynMaterial = UMaterialInstanceDynamic::Create(CurrentMat, this);
-            DynMaterial->SetScalarParameterValue(FName("BlendFactor"), 0.05f);
+            DynMaterial->SetScalarParameterValue(FName("BlendFactor"), DefaultBlendFactor);
             MeshComp->SetMaterial(0, DynMaterial);
         }
     }

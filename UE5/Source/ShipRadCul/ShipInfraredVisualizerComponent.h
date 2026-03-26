@@ -98,6 +98,9 @@ private:
     UPROPERTY()
     UPrimitiveComponent* MeshComp = nullptr;
 
+    /** 初始热混合系数 (对应材质中的BlendFactor) */
+    static constexpr float DefaultBlendFactor = 0.05f;
+
     // 显示状态
     float DisplayedTemperature = 300.0f;
     float DisplayedRadiation = 0.0f;

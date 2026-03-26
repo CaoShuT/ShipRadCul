@@ -21,14 +21,14 @@ const float UShipRadCalculation::RBoilerRoom[2] = { 0.1f, 0.2f };
 
 // ==================== 构造函数 ====================
 UShipRadCalculation::UShipRadCalculation()
-    : CurrentWeather(EWeatherType::Snowy)
+    : CurrentWeather(EWeatherType::Sunny)
     , CurrentPm(0.0f), CurrentTau(0.0f), CurrentAOD(0.0f)
     , CurrentIR_Tau(0.0f), CurrentVisibility(0.0f)
     , CurrentTf(0.0f), CurrentTgrd(0.0f), CurrentFsi(0.0f)
     , CurrentVwind(0.0f), CurrentRH(0.0f), CurrentPressure(0.0f)
     , CurrentCloud(0.0f), CurrentRainRate(0.0f)
     , CurrentRhod(0.0f), CurrentEpslgrd(0.0f)
-    , CurrentScattering(EScatteringType::Snow)
+    , CurrentScattering(EScatteringType::Mie)
     , Qsundir(0.0f), Qsunsca(0.0f), Qsunearth(0.0f)
     , Qsky(0.0f), Qearth(0.0f)
     , Conve1(0.0f), Conve2(0.0f)
@@ -454,7 +454,7 @@ float UShipRadCalculation::StabilizeTemperature(float RawTemperature, float Delt
     float AverageTemp = Sum / TemperatureHistory.Num();
 
     // 平滑
-    SmoothedTemperature = FMath::Lerp(SmoothedTemperature, AverageTemp, Settings->TemperatureSmoothing * DeltaTime * 30.0f);
+    SmoothedTemperature = FMath::Lerp(SmoothedTemperature, AverageTemp, Settings->TemperatureSmoothing * DeltaTime * SMOOTHING_FRAMERATE_FACTOR);
 
     // 钳制范围
     SmoothedTemperature = FMath::Clamp(SmoothedTemperature, 250.0f, 400.0f);
@@ -491,7 +491,7 @@ float UShipRadCalculation::StabilizeRadiation(float RawRadiation, float DeltaTim
     }
 
     // 平滑
-    SmoothedRadiation = FMath::Lerp(SmoothedRadiation, AverageRadiation, Settings->RadiationSmoothing * DeltaTime * 30.0f);
+    SmoothedRadiation = FMath::Lerp(SmoothedRadiation, AverageRadiation, Settings->RadiationSmoothing * DeltaTime * SMOOTHING_FRAMERATE_FACTOR);
 
     // 范围限制
     SmoothedRadiation = FMath::Clamp(SmoothedRadiation, Settings->MinRadiation, Settings->MaxRadiation);

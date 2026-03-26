@@ -110,12 +110,15 @@ void AWeatherManagerActor::NotifyVisualizerComponents(EWeatherType InfraredWeath
     {
         if (!Actor) continue;
 
-        UShipInfraredVisualizerComponent* VisComp =
-            Actor->FindComponentByClass<UShipInfraredVisualizerComponent>();
+        TArray<UShipInfraredVisualizerComponent*> VisComps;
+        Actor->GetComponents<UShipInfraredVisualizerComponent>(VisComps);
 
-        if (VisComp)
+        for (UShipInfraredVisualizerComponent* VisComp : VisComps)
         {
-            VisComp->SetWeather(InfraredWeather);
+            if (VisComp)
+            {
+                VisComp->SetWeather(InfraredWeather);
+            }
         }
     }
 }
