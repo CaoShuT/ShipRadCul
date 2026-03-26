@@ -1,0 +1,161 @@
+// InfraredPseudoColor.usf
+// 红外伪彩色渲染自定义HLSL代码 - UE5版本
+// 对应Unity版本: InfraredPseudoColor.shader
+//
+// 使用方法：
+// 在UE5材质编辑器中创建 Custom 节点，将此代码粘贴到 Code 字段中。
+// 或者通过 Material Function 方式组织。
+// 详见 README_UE5.md 中的材质创建步骤。
+
+// ============================================================
+// 1. 温度转灰度函数 (Custom Node: TempToGrayscale)
+// ============================================================
+// 输入引脚:
+//   Temperature (float): 物体温度 (K)
+//   MinTemp (float): 最低温度 (默认290)
+//   MaxTemp (float): 最高温度 (默认380)
+//   Contrast (float): 对比度 (默认1.5)
+//   Brightness (float): 亮度 (默认1.7)
+// 输出: float (0-1灰度值)
+//
+// float NormalizedTemp = saturate((Temperature - MinTemp) / (MaxTemp - MinTemp));
+// float Grayscale = pow(NormalizedTemp, Contrast) * Brightness;
+// return saturate(Grayscale);
+
+
+// ============================================================
+// 2. 灰度转伪彩色函数 (Custom Node: GrayscaleToPseudoColor)
+// ============================================================
+// 输入引脚:
+//   Grayscale (float): 灰度值 (0-1)
+// 输出: float3 (RGB伪彩色)
+//
+// float g = saturate(Grayscale);
+// float3 color = float3(0, 0, 0);
+//
+// if (g < 0.2)
+//     color = lerp(float3(0.1, 0.0, 0.5), float3(0.0, 0.2, 1.0), g * 5.0);
+// else if (g < 0.4)
+//     color = lerp(float3(0.0, 0.2, 1.0), float3(0.0, 1.0, 1.0), (g - 0.2) * 5.0);
+// else if (g < 0.6)
+//     color = lerp(float3(0.0, 1.0, 1.0), float3(1.0, 1.0, 0.0), (g - 0.4) * 5.0);
+// else if (g < 0.8)
+//     color = lerp(float3(1.0, 1.0, 0.0), float3(1.0, 0.0, 0.0), (g - 0.6) * 5.0);
+// else
+//     color = lerp(float3(1.0, 0.0, 0.0), float3(1.0, 1.0, 1.0), (g - 0.8) * 5.0);
+//
+// return color;
+
+
+// ============================================================
+// 3. 大气衰减函数 (Custom Node: AtmosphericAttenuation)
+// ============================================================
+// 输入引脚:
+//   WorldPosition (float3): 像素世界坐标
+//   CameraPosition (float3): 摄像机世界坐标
+//   AtmosphereDensity (float): 大气密度 (0-0.1)
+// 输出: float (衰减系数0-1)
+//
+// float dist = distance(CameraPosition, WorldPosition);
+// return exp(-AtmosphereDensity * dist);
+
+
+// ============================================================
+// 4. 伪随机噪声函数 (Custom Node: ThermalNoise)
+// ============================================================
+// 输入引脚:
+//   UV (float2): 纹理坐标
+//   Time (float): 当前时间
+//   NoiseIntensity (float): 噪点强度 (0-1)
+// 输出: float (噪声偏移值)
+//
+// float2 NoiseUV = UV;
+// NoiseUV.y += Time * 5.0;
+// NoiseUV.x += Time * 0.5;
+// float noise = (frac(sin(dot(NoiseUV, float2(12.9898, 78.233))) * 43758.5453) - 0.5) * NoiseIntensity;
+// return noise;
+
+
+// ============================================================
+// 5. 完整红外渲染主逻辑 (Custom Node: InfraredMain)
+// ============================================================
+// 这是将以上所有步骤整合的完整自定义节点代码。
+// 输入引脚:
+//   Temperature (float)
+//   Radiation (float)
+//   EmissionIntensity (float)
+//   MinTemp (float)
+//   MaxTemp (float)
+//   Contrast (float)
+//   Brightness (float)
+//   AmbientTemp (float)
+//   AtmosphereDensity (float)
+//   NoiseIntensity (float)
+//   BlendFactor (float)
+//   UV (float2)
+//   WorldPosition (float3)
+//   CameraPosition (float3)
+//   Time (float)
+//   BaseTexture (float3) - 从Texture Sample节点获取
+//   UsePseudoColor (float) - 0或1
+//   PseudoColorIntensity (float)
+//
+// 输出名称列表(多输出): Albedo, Emissive
+//
+// --- 以下为完整可粘贴代码 ---
+
+// 温度转灰度
+float NormalizedTemp = saturate((Temperature - MinTemp) / (MaxTemp - MinTemp));
+float Grayscale = pow(NormalizedTemp, Contrast) * Brightness;
+Grayscale = saturate(Grayscale);
+
+// 环境温度灰度
+float AmbientNorm = saturate((AmbientTemp - MinTemp) / (MaxTemp - MinTemp));
+float AmbientGray = pow(AmbientNorm, Contrast) * Brightness;
+AmbientGray = saturate(AmbientGray);
+
+// 大气距离衰减
+float Dist = distance(CameraPosition, WorldPosition);
+float Attenuation = exp(-AtmosphereDensity * Dist);
+Grayscale = lerp(AmbientGray, Grayscale, Attenuation);
+
+// 热噪声
+float2 NoiseUV = UV;
+NoiseUV.y += Time * 5.0;
+NoiseUV.x += Time * 0.5;
+float Noise = (frac(sin(dot(NoiseUV, float2(12.9898, 78.233))) * 43758.5453) - 0.5) * NoiseIntensity;
+Grayscale = saturate(Grayscale + Noise);
+
+// 伪彩色映射
+float g = saturate(Grayscale);
+float3 PseudoColor = float3(0, 0, 0);
+if (g < 0.2)
+    PseudoColor = lerp(float3(0.1, 0.0, 0.5), float3(0.0, 0.2, 1.0), g * 5.0);
+else if (g < 0.4)
+    PseudoColor = lerp(float3(0.0, 0.2, 1.0), float3(0.0, 1.0, 1.0), (g - 0.2) * 5.0);
+else if (g < 0.6)
+    PseudoColor = lerp(float3(0.0, 1.0, 1.0), float3(1.0, 1.0, 0.0), (g - 0.4) * 5.0);
+else if (g < 0.8)
+    PseudoColor = lerp(float3(1.0, 1.0, 0.0), float3(1.0, 0.0, 0.0), (g - 0.6) * 5.0);
+else
+    PseudoColor = lerp(float3(1.0, 0.0, 0.0), float3(1.0, 1.0, 1.0), (g - 0.8) * 5.0);
+
+// 选择灰度或伪彩色
+float3 BaseColor = float3(Grayscale, Grayscale, Grayscale);
+if (UsePseudoColor > 0.5)
+    BaseColor = lerp(BaseColor, PseudoColor, PseudoColorIntensity);
+
+// 混合纹理
+float3 FinalColor = lerp(BaseColor, BaseTexture, BlendFactor);
+
+// 计算自发光
+float RadIntensity = saturate(Radiation / 1000.0);
+
+// 输出
+Albedo = FinalColor * 0.9;
+Emissive = FinalColor * RadIntensity * EmissionIntensity * Attenuation;
+
+// 注意：在UE5材质编辑器的Custom节点中使用时，
+// 如果配置了多个输出引脚(Albedo, Emissive)，请移除下面的return语句。
+// 如果作为单输出节点使用，则保留return。
+// return 1;
